@@ -182,6 +182,18 @@ body::after{animation:crt 5s steps(1) infinite}@keyframes crt{0%,92%,100%{opacit
 @media(prefers-reduced-motion:reduce){body::before,body::after,.tc svg,.rs svg,.pl.cur,dialog[open],#hero::before,.bn{animation:none}}
 @media(prefers-reduced-motion:reduce){.hot,#die.tumble svg{animation:none}}
 @media(prefers-reduced-motion:reduce){.tok.on,#board.shake{animation:none}}
+.t.fl0{background-image:conic-gradient(rgba(0,0,0,.16) 25%,transparent 0 50%,rgba(0,0,0,.16) 0 75%,transparent 0);background-size:10px 10px}
+.t.fl1{background-image:linear-gradient(rgba(0,0,0,.14) 1px,transparent 1px),linear-gradient(90deg,rgba(0,0,0,.14) 1px,transparent 1px);background-size:8px 8px}
+.t.fl2{background-image:repeating-linear-gradient(90deg,rgba(0,0,0,.14) 0 1px,transparent 1px 7px)}
+.t.fl3{background-image:radial-gradient(rgba(0,0,0,.25) 1.5px,transparent 2.2px);background-size:7px 7px}
+.t.fl4{background-image:repeating-linear-gradient(0deg,rgba(0,0,0,.16) 0 2px,transparent 2px 6px)}
+.t.fl5{background-image:linear-gradient(45deg,rgba(255,255,255,.2) 25%,transparent 25% 75%,rgba(255,255,255,.2) 75%);background-size:10px 10px}
+.t.fl6{background-image:repeating-linear-gradient(45deg,rgba(0,0,0,.13) 0 3px,transparent 3px 6px)}
+.t.fl7{background-image:radial-gradient(rgba(255,255,255,.28) 1.5px,transparent 2.2px);background-size:7px 7px}
+.tok.mv{animation:hop .12s ease-out}@keyframes hop{40%{transform:translateY(-9px) scale(1.12)}}
+#board.hit::after{content:'';position:absolute;inset:0;background:rgba(179,32,42,.5);pointer-events:none;z-index:6;animation:fh .45s steps(4) forwards}@keyframes fh{to{opacity:0}}
+#center::after{content:'';position:absolute;inset:0;background:radial-gradient(circle at 50% 38%,rgba(255,190,90,.16),transparent 66%);animation:cand 2.6s ease-in-out infinite alternate;pointer-events:none}@keyframes cand{to{opacity:.45}}
+@media(prefers-reduced-motion:reduce){#center::after,.tok.mv,#board.hit::after{animation:none}}
 </style>
 </head>
 <body>
@@ -234,7 +246,7 @@ const CAR=[['Doctor','🩺'],['Butler','🎩'],['Detective','🔎'],['Banker','�
 const PCOL=['#e53935','#fdd835','#f5f5f5','#43a047','#1e88e5','#8e24aa'];
 const PERK=['Charm: never pays rent','Cautious: starts with trap insurance','Cook: starts with +$3','Faithful: 4 lives instead of 3','Society: bank trade costs only 2','Scholar: peeking at clues costs 1 good'];
 const VPW=8;
-const vps=p=>{const o=G.P[1-p.id];return p.wings+Object.keys(G.mnr).filter(i=>G.wings[i]===p.id).length+p.vp+(lr(p)>=4&&lr(p)>lr(o)?2:0)+(p.kn>=2&&p.kn>o.kn?2:0)};
+const vps=p=>{const o=G.P[1-p.id];return p.wings+Object.keys(G.mnr).filter(i=>G.wings[i]===p.id).length+p.vp+(p.ambok?2:0)+(lr(p)>=4&&lr(p)>lr(o)?2:0)+(p.kn>=2&&p.kn>o.kn?2:0)};
 const nearWing=i=>G.wings[(i+1)%N]!==undefined||G.wings[(i+N-1)%N]!==undefined;
 const rate=(p,k)=>p.pw===4?2:Object.keys(G.wings).some(i=>G.wings[i]===p.id&&room(+i)[1]===k)?2:3;
 const NUM=i=>[6,8,5,9,4,10,3,11,2,12][i%10];
@@ -256,7 +268,7 @@ const EVENTS=[
  ['A stray cat leads you to a clue!',p=>{const c=investigate(p);if(c)say(`${cl(p,c)} is innocent.`)}],
  ['The doctor patches you up. +1 life',p=>p.lives=Math.min(p.max,p.lives+1)],
  ['Lumber sale! +2 wood',p=>p.res.wood+=2],
- ['The handyman disarms a rival trap!',p=>{const ks=Object.keys(G.traps).filter(k=>G.traps[k]!==p.id);if(ks.length)delete G.traps[pick(ks)]}],
+ ['The handyman disarms a rival trap!',p=>{const ks=Object.keys(G.traps).filter(k=>G.traps[k]!==p.id);if(ks.length){const k=pick(ks);delete G.traps[k];delete G.tt[k];G.P.forEach(q=>q.seen.delete(+k))}}],
  ['Tax rebate on the east wing. +$1 per wing',p=>p.cash+=p.wings],
  ['Dumb-waiter ride! Jump ahead 3.',p=>move(p,3,true)],
  ['Wedding in the ballroom! Gifts +$3, family +1',p=>{p.cash+=3;p.fam++}],
@@ -265,6 +277,8 @@ const EVENTS=[
  ['Hot stock tip! Free share.',p=>p.stock=Math.min(3,p.stock+1)],
  ['An anonymous tip arrives. Trust it?',p=>tip(p)],['A smudged letter hints at an alibi...',p=>tip(p)]
 ];
+const AMB=[['Collector','Hold 7+ goods',p=>Object.values(p.res).reduce((a,b)=>a+b,0)>=7],['Landlord','Own 2 wings',p=>p.wings>=2],['Survivor','Be at full lives',p=>p.lives>=p.max],['Sleuth','Clear 11 cards',p=>p.known.reduce((a,s)=>a+s.size,0)>=11],['Tycoon','Hold $15+',p=>p.cash>=15],['Traveller','Lay a road of 3+',p=>lr(p)>=3]];
+function ambChk(p){if(p.amb==null||p.ambok||!AMB[p.amb][2](p))return;p.ambok=1;say(`${p.name} fulfils a secret ambition: ${AMB[p.amb][0]}! +2 points`);banner('🎯 AMBITION MET');sfx('win')}
 const room=i=>ROOMS[Math.floor(i/3)];
 const kind=i=>i%6===0?'pay':i%6===3?'evt':'res';
 /* ring positions on 7x7 grid */
@@ -282,7 +296,12 @@ function music(){if(mus){clearInterval(mus);mus=null;return false}
  const n=[262,330,392,330,294,349,440,349,262,330,392,523,494,392,330,294];let i=0;
  mus=setInterval(()=>{beep(n[i%16]/(i%8<4?1:2),.14,'triangle',1);i++},240);return true}
 const art=(m,pal)=>{let r='';m.forEach((row,y)=>[...row].forEach((ch,x)=>{if(pal[ch])r+=`<rect class="p${ch}" x="${x}" y="${y}" width="1" height="1" fill="${pal[ch]}"/>`}));return `<svg viewBox="0 0 ${m[0].length} ${m.length}" shape-rendering="crispEdges" xmlns="http://www.w3.org/2000/svg">${r}</svg>`};
-const HERO=['..........RRRR..........','........RRRRRRRR........','......RRRRRRRRRRRR......','..RR..WWWWWWWWWWWW..RR..','.RRRR.WYYWWWWWWYYW.RRRR.','..WW..WYYWWDDWWYYW..WW..','..WY..WWWWWDDWWWWW..YW..','..WY..WYYWWDDWWYYW..YW..','..WW..WYYWWDDWWYYW..WW..','WWWWWWWWWWWDDWWWWWWWWWWW'];
+const HERO=(()=>{const g=Array.from({length:18},()=>Array(32).fill('.')),R=(x0,y0,x1,y1,c)=>{for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++)g[y][x]=c};
+ R(0,16,31,17,'G');R(14,16,17,17,'S');R(1,11,9,15,'W');R(22,11,30,15,'W');R(8,8,23,15,'W');R(13,4,18,15,'w');
+ for(let k=0;k<4;k++)R(15-k,k,16+k,k,'R');R(7,7,24,7,'R');R(9,6,12,6,'R');R(19,6,22,6,'R');R(0,10,10,10,'R');R(21,10,31,10,'R');R(5,4,6,7,'W');R(5,3,6,3,'r');
+ [[9,9],[21,9],[15,6],[3,12],[6,12],[24,12],[27,12],[10,12],[20,12]].forEach(([x,y])=>R(x,y,x+1,y+1,'Y'));
+ R(14,12,17,15,'D');R(15,13,16,15,'K');R(0,15,0,15,'T');return g.map(r=>r.join(''))})();
+const HPAL={R:'#b3202a',r:'#7a1620',W:'#6b3d52',w:'#8a5570',Y:'#f5c542',D:'#c9a227',K:'#1a0a2e',G:'#1f4d43',S:'#8d7f6a',T:'#2b1b17'};
 const PIP={1:[4],2:[0,8],3:[0,4,8],4:[0,2,6,8],5:[0,2,4,6,8],6:[0,2,3,5,6,8]};
 const dieSvg=n=>`<svg viewBox="0 0 11 11" shape-rendering="crispEdges"><rect width="11" height="11" fill="#e8d9b0"/><rect x="1" y="1" width="9" height="9" fill="#fff"/>${PIP[n].map(i=>`<rect x="${2+(i%3)*3}" y="${2+Math.floor(i/3)*3}" width="2" height="2" fill="#b3202a"/>`).join('')}</svg>`;
 const cl=(p,c)=>G.mode===1?c:'a card';
@@ -340,9 +359,9 @@ const ic=(c,i)=>c===0?face(i):sp(c===1?'w'+i:'r'+i,'currentColor');
 const LS=(k,v)=>{try{if(v===undefined)return localStorage.getItem(k);v===null?localStorage.removeItem(k):localStorage.setItem(k,v)}catch(e){return null}};
 let diff=+(LS('demd')||1);
 let acc2=LS('dema')==='1';
-const DF=[{fin:.6,gam:0,gr:99,cmb:0,dev:.25,road:.2,eco:0,sug:.4,wing:.4,inv:.2,trap:.4},
- {fin:.85,gam:.2,gr:11,cmb:2,dev:.5,road:.4,eco:1,sug:.5,wing:.7,inv:.25,trap:1},
- {fin:1,gam:.6,gr:8,cmb:2,dev:.8,road:.6,eco:1,sug:.75,wing:.95,inv:.5,trap:1}];
+const DF=[{fin:.6,gam:0,gr:99,cmb:0,dev:.25,road:.2,eco:0,sug:.4,wing:.4,inv:.2,trap:.4,srch:.25},
+ {fin:.85,gam:.2,gr:11,cmb:2,dev:.5,road:.4,eco:1,sug:.5,wing:.7,inv:.25,trap:1,srch:.45},
+ {fin:1,gam:.6,gr:8,cmb:2,dev:.8,road:.6,eco:1,sug:.75,wing:.95,inv:.5,trap:1,srch:.7}];
 const combos=p=>p.known.reduce((a,s,c)=>{const r=CATS[c][1].length-s.size;return a*(c===0&&G.acc2?r*(r-1)/2:r)},1);
 const TUT=['TUTORIAL 1/5: Welcome to the manor! Tap ROLL to move your pawn.',
  '2/5: Now the mystery. The killer, weapon and room are the 3 cards nobody holds. In the CLUES tab tap SUGGEST to question your rival (or PEEK / BUY CLUE).',
@@ -375,7 +394,7 @@ function streakUp(){const d=dly(),t=dayStr(0);if(d.d!==t){d.s=(d.d===dayStr(-1)?
 function meta(w){if(G.mode===2||w<0)return;const me=G.mode===3?G.me:0,P=G.P[me];
   if(P.cash>=25)badge('tycoon');if(P.wings>=3)badge('builder');
   if(w===me){badge('win');if(G.daily){badge('daily');streakUp()}if(G.accWin&&G.round<8)badge('sherlock')}}
-const HSV=art(HERO,{R:'#b3202a',W:'#6b3d52',Y:'#f5c542',D:'#c9a227'});
+const HSV=art(HERO,HPAL);
 const FLAME=art(['...O....','..OOY...','..OYY.O.','.OOYYOO.','.OYYYYO.','.OYYYYO.','..OYYO..','...OO...','...TT...'],{O:'#e65100',Y:'#ffd54f',T:'#6d4c41'});
 function banner(t){const b=$('#fx');if(!b)return;const e=document.createElement('div');e.className='bn';e.textContent=t;e.style.borderColor=cur().col;b.appendChild(e);setTimeout(()=>e.remove(),1500)}
 function fin(txt,rw,r){$('#dbody').innerHTML=`<h2>RESULT</h2><p>${txt}</p><button id="cl">COLLECT</button>`;$('#cl').onclick=()=>r(rw)}
@@ -475,6 +494,7 @@ function newGame(mode,seed,me,pw,cr){
   for(let k=deck.length-1;k>0;k--){const j=rnd(k+1);[deck[k],deck[j]]=[deck[j],deck[k]]}
   deck.forEach((cd,k)=>{const p=G.P[k%2];p.hand.push(cd);p.known[cd[0]].add(cd[1])});
   G.cat=rnd(N);const used=new Set();G.wp=WEP.map(()=>{let t;do{t=rnd(N)}while(used.has(t));used.add(t);return t});
+  G.P[0].amb=rnd(6);G.P[1].amb=(G.P[0].amb+1+rnd(5))%6;
   $('#menu').hidden=true;$('#game').hidden=false;
   buildBoard();say('A body in the study! Roll the die.');render();
   if(G.P[0].cpu)cpuTurn();
@@ -498,7 +518,7 @@ function buildBoard(){
 function renderTiles(){
   $('#board').classList.toggle('dark',!!G.dark);
   POS.forEach((_,i)=>{
-    const k=kind(i),t=$('#t'+i);t.className='t'+(G.P[G.turn].pos===i?' hot':'')+(i%3===0?' f':'')+(G.hl&&G.wings[i]!==undefined&&NUM(i)===G.hl?' prod':'');
+    const k=kind(i),t=$('#t'+i);t.className='t fl'+Math.floor(i/3)+(G.P[G.turn].pos===i?' hot':'')+(i%3===0?' f':'')+(G.hl&&G.wings[i]!==undefined&&NUM(i)===G.hl?' prod':'');
     let h=(i%3===0?`<span class="ri">${sp('r'+Math.floor(i/3),'#fff')}</span>`:'')+`<small>${k==='pay'?'$':k==='evt'?'?':PASS[i]!==undefined?'◈':i%12===10?'⑂':''}</small>`+`<span class="rs ${k}">${TS[k==='res'?room(i)[1]:k]}</span>`;
     if(G.wings[i]!==undefined)h+=`<span class="tag">${sp('house',G.P[G.wings[i]].col)}</span><b class="n ${[6,8].includes(NUM(i))?'h':''}">${NUM(i)}${G.mnr[i]?'♛':''}</b>`;
     if(k==='res'&&G.wings[i]===undefined)h+=`<b class="n d ${[6,8].includes(NUM(i))?'h':''}">${NUM(i)}</b>`;
@@ -507,7 +527,7 @@ function renderTiles(){
     if(G.cat===i)h+=`<span class="mx">${sp('cat','#e8d9b0')}</span>`;
     {let wk=0;(G.wp||[]).forEach((t,w)=>{if(t===i){h+=`<span class="wk" style="left:${2+wk*10}px">${sp('w'+w,'#fff')}</span>`;wk++}})}
     if(G.traps[i]!==undefined&&(G.traps[i]===viewer()||(viewer()>=0&&G.P[viewer()].seen.has(i))))h+=`<span class="tag" style="top:36%">${sp('t'+(G.tt[i]||0),G.traps[i]===viewer()?'#fff':'#ffab40')}</span>`;
-    G.P.forEach((p,j)=>{if(p.pos===i&&p.lives>0)h+=`<b class="tok ${j?'b':'a'} ${j===G.turn?'on':''}">${sp('pawn',G.P[j].col)}</b>`});
+    G.P.forEach((p,j)=>{if(p.pos===i&&p.lives>0)h+=`<b class="tok ${j?'b':'a'} ${j===G.turn?'on':''} ${G.step&&j===G.turn?'mv':''}">${sp('pawn',G.P[j].col)}</b>`});
     t.innerHTML=h;
   });
 }
@@ -516,7 +536,7 @@ function renderCenter(){
   $('#board').style.filter=`brightness(${Math.max(.78,1-G.round*.013)})`;
   $('#hud').innerHTML=G.P.map((q,j)=>{
     const gd=Object.entries(RES).filter(([k])=>q.res[k]).map(([k,e])=>`<span><i class="gi">${TS[k]}</i>${q.res[k]}</span>`).join('')||'<span>no goods</span>';
-    const ex=[`🏆${vps(q)}/${VPW}`,`🗺${(q.vis||[]).length}/8`,q.fam?`👪${q.fam}`:'',q.stock?`📈${q.stock}`:'',q.kn?`⚔️${q.kn}`:'',lr(q)?`🛣️${lr(q)}`:'',q.vp?`⭐${q.vp}`:''].filter(Boolean).join(' ');
+    const ex=[`🏆${vps(q)}/${VPW}`,`🗺${(q.vis||[]).length}/8`,q.fam?`👪${q.fam}`:'',q.stock?`📈${q.stock}`:'',q.kn?`⚔️${q.kn}`:'',lr(q)?`🛣️${lr(q)}`:'',q.vp?`⭐${q.vp}`:'',q.amb==null?'':(q.id===viewer()||G.over)?`🎯${AMB[q.amb][0]}${q.ambok?'✔':''}`:`🎯${q.ambok?'✔':'?'}`].filter(Boolean).join(' ');
     return `<div class="pl ${j===G.turn?'cur':''}" style="--c:${q.col}"><i class="pf">${face(q.pw)}</i><div class="pi"><b>${q.name}</b> ${CAR[q.car][1]}${'★'.repeat(q.rk)}<div class="st">${sp('heart','#e53935').repeat(q.lives)} ${sp('coin','#fbc02d')}${q.cash} ${sp('house',q.col)}${q.wings}</div><div class="gd">${gd}</div><div class=\"pb\" title=\"Cards deduced\"><i style=\"width:${Math.min(100,Math.round(100*q.known.reduce((a,s)=>a+s.size,0)/(17-(G.acc2?1:0))))}%\"></i></div>${ex?`<div class="gd">${ex}</div>`:''}</div></div>`}).join('');
   $('#center').innerHTML=`<div class="wm">${HSV}</div><div id="die" class="px ${G.rolling?'tumble':''}">${G.die?dieSvg(G.die):'🎲'}</div><div class="rm"><i class=\"pf in\">${sp('r'+Math.floor(p.pos/3),'currentColor')}</i>${room(p.pos)[0].toUpperCase()}<small>Round ${G.round}/${MAXR}</small></div><div id="log">${G.log.slice(0,1).map(l=>`<p>${l}</p>`).join('')}</div>`;
 }
@@ -526,7 +546,7 @@ function total(p){return Object.values(p.res).reduce((a,b)=>a+b,0)}
 function renderActs(){
   const p=cur(),a=$('#acts'),off=G.over||G.busy||p.cpu||(G.mode===3&&p.id!==G.me);
   const here=p.pos;
-  const GRP={roll:'T',dir:'T',end:'T',acc:'T',sug:'C',search:'C',inv:'C',clue:'C',trap:'B',wing:'B',manor:'B',road:'B',dev:'B',scout:'B',buy:'L',arcade:'L',promo:'L',ins:'L',stk:'L',trade:'L',ptrade:'L'},cnt={T:0,C:0,B:0,L:0};
+  const GRP={roll:'T',dir:'T',end:'T',acc:'T',sug:'C',search:'C',inv:'C',clue:'C',trap:'B',disarm:'B',wing:'B',manor:'B',road:'B',dev:'B',scout:'B',buy:'L',arcade:'L',promo:'L',ins:'L',stk:'L',trade:'L',ptrade:'L'},cnt={T:0,C:0,B:0,L:0};
   const B=(id,txt,dis)=>{const g=GRP[id],ok=!(off||dis);if(ok)cnt[g]++;return `<button data-a="${id}" ${ok?'':'disabled'} ${g===(G.tab||'T')?'':'hidden'}>${txt}</button>`};
   a.innerHTML=
     B('dir',p.rev?'⬅ GO BACKWARD':'➡ GO FORWARD',G.rolled)+
@@ -535,6 +555,7 @@ function renderActs(){
     B('search','SEARCH THIS ROOM (1 good)',!G.rolled||total(p)<1||p.known[2].has(Math.floor(here/3)))+
     B('inv','PEEK AT RIVAL CARD (2 goods)',!G.rolled||G.pk||total(p)<(p.pw===5?1:2))+
     B('trap','SET TRAP ☠',!G.rolled||!TR.some(t=>afford(p,t.c))||G.traps[here]!==undefined)+
+    B('disarm','DISARM AHEAD ($3)',!G.rolled||p.cash<3)+
     B('wing','BUILD WING 🏠 (🪵🧱🌾🐑)',!G.rolled||!afford(p,COST.wing)||G.wings[here]!==undefined||nearWing(here))+
     B('trade','BANK TRADE 3→1',!G.rolled||!Object.keys(RES).some(k=>p.res[k]>=rate(p,k)))+
     B('promo',p.rk>=2?'MAX RANK':'PROMOTION ($5)',!G.rolled||p.rk>=2||p.cash<5)+
@@ -566,7 +587,7 @@ function render(){renderTiles();renderCenter();renderActs();renderNotebook();fx(
 /* ---------- RULES ---------- */
 function modal(html){return new Promise(r=>{$('#dbody').innerHTML=html;const d=$('#dlg');d.showModal();$('#dok').onclick=()=>{d.close();r()}})}
 function hurt(p,why){
-  p.lives--;sfx('hit');try{navigator.vibrate&&navigator.vibrate(120)}catch(e){}$('#board').classList.add('shake');setTimeout(()=>$('#board').classList.remove('shake'),400);say(`${p.name} is hurt by ${why}! ❤️${p.lives}`);
+  p.lives--;sfx('hit');try{navigator.vibrate&&navigator.vibrate(120)}catch(e){}$('#board').classList.add('shake','hit');setTimeout(()=>$('#board').classList.remove('shake','hit'),450);say(`${p.name} is hurt by ${why}! ❤️${p.lives}`);
   if(p.lives<=0){say(`${p.name} is dead!`);endGame(1-p.id,`${p.name} met a dead end.`)}
 }
 function move(p,n,quiet){
@@ -596,8 +617,9 @@ async function roll(){
   for(let s=0;s<n&&!G.over;s++){
     p.pos=(p.pos+(p.rev?N-1:1))%N;if(p.pos===0&&!p.rev)salary(p);
     if(s<n-1&&G.roads[p.pos]===p.id){p.cash++}
-    beep(500+s*40,.04);renderTiles();await sleep(120);
+    beep(500+s*40,.04);G.step=1;renderTiles();await sleep(120);
   }
+  G.step=0;
   p.rev=false;land(p);G.busy=false;render();
 }
 function investigate(p){
@@ -637,6 +659,9 @@ async function act(a,x,remote){
   if(a==='bonus'){applyBonus(p,x[0],x[1])}
   if(a==='promo'){p.cash-=5;p.rk++;say(`${p.name} is promoted to ${['','Senior','Chief'][p.rk]} ${CAR[p.car][0]}!`);sfx('win')}
   if(a==='buy'){p.cash-=3;const k=Object.keys(RES).sort((u,v)=>p.res[u]-p.res[v])[0];p.res[k]++;say(`${p.name} buys ${RES[k]}.`);beep(600)}
+  if(a==='disarm'){p.cash-=3;const o=G.P[1-p.id];let f=-1;for(let k=1;k<=3&&f<0;k++){const i=(p.pos+k)%N;if(G.traps[i]===o.id){delete G.traps[i];delete G.tt[i];G.P.forEach(q=>q.seen.delete(i));f=k}}
+    say(f<0?`${p.name} sweeps the corridor ahead.`:`${p.name} disarms a trap ${f} tile${f>1?'s':''} ahead!`);sfx('card');render();
+    if(isMine(p))await modal(f<0?'<h2>ALL CLEAR</h2><p>You found no rival trap in the next 3 tiles.</p>':`<h2>DISARMED!</h2><p>A rival trap ${f} tile${f>1?'s':''} ahead is gone for good.</p>`);return}
   if(a==='scout'){p.cash-=2;const f=scout(p);say(`${p.name} sends Mittens the cat to sniff ahead.`);render();
     if(isMine(p))await modal(f<0?'<h2>MEOW</h2><p>Mittens purrs. The next 6 tiles look safe.</p>':`<h2>HISS!</h2><p>Mittens spots a trap ${f} tile${f>1?'s':''} ahead. It is marked on your board.</p>`);return}
   if(a==='manor'){pay2(p,COST.manor);G.mnr[p.pos]=1;say(`${p.name} upgrades a wing to a manor.`);sfx('build')}
@@ -737,7 +762,7 @@ function online(){
   $('#oh').onclick=()=>{const code=Array.from({length:4},()=>'ABCDEFGHJKLMNPQRSTUVWXYZ'[Math.floor(Math.random()*24)]).join('');
     peer=new Peer('dem-'+code);peer.on('error',fail);peer.on('open',()=>st('Share code '+code+' and wait for your friend...'));
     peer.on('connection',c=>{conn=c;wire(c);c.on('open',async()=>{const a=await pickPawn('HOST: PICK A PAWN',[],1);c.send({t:'hp',x:a});$('#dok').style.display='none';$('#dbody').innerHTML='<h2>WAITING</h2><p>Your friend is choosing a pawn...</p>';d.showModal();const b=await new Promise(r=>pwRes=r);const seed=Math.floor(Math.random()*1e9);c.send({t:'start',seed,pw:[a,b]});d.close();$('#dok').style.display='';newGame(3,seed,0,[a,b])})})};
-  $('#oj').onclick=()=>{peer=new Peer();peer.on('error',fail);peer.on('open',()=>{conn=peer.connect('dem-'+$('#oc').value.toUpperCase().trim());wire(conn);st('Connecting...')})};
+  $('#oj').onclick=()=>{peer=new Peer();peer.on('error',fail);peer.on('open',()=>{conn=peer.connect('dem-'+$('#oc').value.toUpperCase().trim());wire(conn);st('Connecting...');const c0=conn;setTimeout(()=>{if(!c0.open&&$('#os'))st('Could not find that room. Check the code and try again.')},10000)})};
 }
 async function playerTrade(){
   const p=cur(),o=other(),d=$('#dlg');let gv=null,gt=null;
@@ -774,7 +799,7 @@ async function endTurn(){
   /* wings produce goods */
   if(p.car===4)p.res.wheat++;
   if(G.round%3===0){if(p.car===0&&p.lives<p.max)p.lives++;if(p.car===2){const c=investigate(p);if(c)say(`${p.name} the detective clears ${cl(p,c)}.`)}}
-  G.rolled=false;G.sugged=false;G.pk=false;G.arc=false;G.sug2=false;G.die=0;G.tab='T';
+  ambChk(p);if(G.over)return;G.rolled=false;G.sugged=false;G.pk=false;G.arc=false;G.sug2=false;G.die=0;G.tab='T';
   if(G.turn===1){produce();moveCat();haunt();G.round++;G.dark=G.round>2&&rnd(5)===0;if(G.dark){say('The lights go out! Traps hit harder.');banner('LIGHTS OUT!')}if(G.round>MAXR)return endByScore()}
   G.turn=1-G.turn;
   if(cur().skip){cur().skip=0;say(`${cur().name} is tangled in cobwebs and loses a turn!`);render();await sleep(800);return endTurn()}
@@ -783,7 +808,7 @@ async function endTurn(){
   if(G.mode===1&&G.tut==null&&!cur().cpu&&G.round>1&&Math.random()<.3)await cpuOffer();
   if(cur().cpu)cpuTurn();
 }
-function score(p){const o=G.P[1-p.id];return p.cash+p.wings*5+p.lives*2+p.fam*3+p.stock*2+p.vp*2+p.rk*2+Object.keys(G.mnr).filter(i=>G.wings[i]===p.id).length*3+(lr(p)>=4&&lr(p)>lr(o)?4:0)+(p.kn>=2&&p.kn>o.kn?3:0)}
+function score(p){const o=G.P[1-p.id];return p.cash+p.wings*5+p.lives*2+p.fam*3+p.stock*2+p.vp*2+(p.ambok?4:0)+p.rk*2+Object.keys(G.mnr).filter(i=>G.wings[i]===p.id).length*3+(lr(p)>=4&&lr(p)>lr(o)?4:0)+(p.kn>=2&&p.kn>o.kn?3:0)}
 function endByScore(){
   const [a,b]=G.P;const sa=score(a),sb=score(b);
   const w=sa===sb?-1:sa>sb?0:1;
@@ -808,6 +833,7 @@ async function cpuTurn(){
   const step=async()=>{render();await sleep(650)};
   const D=DF[G.diff??1];
   if((solved(p)&&Math.random()<D.fin)||(D.gam&&G.round>=D.gr&&combos(p)<=D.cmb&&Math.random()<D.gam)){G.busy=false;return accuse(p,guess(p))}
+  if(D.eco&&p.cash>=9&&Math.random()<.25){p.cash-=3;const o=G.P[1-p.id];for(let k=1;k<=3;k++){const i=(p.pos+k)%N;if(G.traps[i]===o.id){delete G.traps[i];delete G.tt[i];G.P.forEach(q=>q.seen.delete(i));say(`${p.name} disarms a trap ahead.`);break}}await step()}
   if(afford(p,COST.dev)&&Math.random()<D.dev){pay2(p,COST.dev);dev(p);await step()}
   if(afford(p,COST.road)&&G.roads[p.pos]===undefined&&Math.random()<D.road){pay2(p,COST.road);G.roads[p.pos]=p.id;say(`${p.name} lays a road.`);await step()}
   if(D.eco&&p.cash>=12&&p.rk<2){p.cash-=5;p.rk++;say(`${p.name} is promoted!`)}
@@ -857,7 +883,7 @@ $('#bi').hidden=matchMedia('(display-mode: standalone)').matches||!!navigator.st
 $('#bi').onclick=async()=>{if(ip){ip.prompt();await ip.userChoice;ip=null;$('#bi').hidden=true}else{$('#dok').style.display='';modal('<h2>INSTALL</h2><p><b>iPhone / iPad (Safari):</b> tap Share, then Add to Home Screen.</p><p><b>Android / desktop Chrome or Edge:</b> open the browser menu and choose Install app (or Add to Home screen).</p><p>Once installed it opens full screen, and solo games work offline.</p>')}};
 if('serviceWorker' in navigator&&location.protocol.startsWith('http'))navigator.serviceWorker.register('sw.js').catch(()=>{});
 $('#bo').onclick=online;
-$('#hero').innerHTML=art(HERO,{R:'#b3202a',W:'#6b3d52',Y:'#f5c542',D:'#c9a227'});
+$('#hero').innerHTML=art(HERO,HPAL);
 $('#rec').textContent=`Record: ${W()[0]} wins, ${W()[1]} losses`;
 $('#quit').onclick=()=>location.reload();
 setInterval(()=>{if(!$('#game').hidden&&!matchMedia('(prefers-reduced-motion:reduce)').matches&&Math.random()<.3){document.body.classList.add('zap');beep(70,.4,'sawtooth');setTimeout(()=>document.body.classList.remove('zap'),160)}},9000);
@@ -871,7 +897,7 @@ $('#bh').onclick=()=>{$('#dok').style.display='';modal(`<h2>HOW TO PLAY</h2><ol 
 <li><b>Your hand:</b> the 17 innocent cards are dealt between you and your rival. Yours are struck out from the start; the killer, weapon and room are the 3 cards nobody holds.</li><li><b>Suggest (once a turn, free):</b> name a suspect and weapon in the room you stand in. If your rival holds one of the three cards, they secretly show you one. If not, every card you named is the solution or in your own hand. Bluffing with your own cards is allowed, and the suggestion is public, so your rival learns from it too.</li><li><b>Look for clues:</b> once per turn, spend any 2 goods (or buy a clue for $5) to peek at one card from your rival's hand. Tap cards in your notebook to star hunches.</li>
 <li><b>Set a trap ☠:</b> pick a type (below). Your rival loses 1 ❤️ stepping on it (it then springs). Traps are hidden from your rival; you see yours as a skull. You start with 3 lives (13 Dead End Drive). Your own traps never hurt you.</li>
 <li><b>Build a wing 🏠:</b> costs 🪵🧱🌾🐑. Each wing has a number. After every round a 2-dice production roll gives its owner 2 goods when it matches (a 7 wakes the robber 🥷, who blocks a tile; players with over 7 goods discard half). Wings also earn $1 rent and 5 points, and give you 2:1 bank trades on that room's good (harbor).</li><li><b>Roads 🛣️ (🪵🧱):</b> lay one per tile. Passing your own road pays $1. Longest unbroken run of 4+ wins 4 bonus points.</li><li><b>Dev cards (⛏️🐑🌾):</b> Knight (moves the robber to a rival wing and steals a good; 2+ knights and more than your rival gets 3 points), Victory point (+2), Year of Plenty, Monopoly.</li>
-<li><b>Direction:</b> before rolling you can choose to walk backward (no Hall salary going backward). <b>Grand Tour 🗺:</b> visit all 8 rooms to earn $5 and a clue, then start over. The green bar on each player card shows how much of the case they have deduced.</li><li><b>Trade:</b> swap 1 good with your rival (the CPU accepts if it has a spare), or trade 3→1 with the bank.</li><li><b>Careers:</b> each player gets one. Doctor heals every 3 rounds, Butler gains a good on payday, Detective clears a card every 3 rounds, Banker earns $2 extra on payday.</li><li><b>Shop:</b> $3 buys a good, $5 buys a clue.</li><li><b>Weapons:</b> the six weapons lie on the board. Landing on one pays $1. A suggestion drags the named weapon to your tile, and if it is already on your tile when you name it, your rival must reveal that weapon card first (caught red-handed).</li><li><b>Max the cat 🐈:</b> wanders 1 to 3 tiles forward each round and knocks out any trap she passes (yours too).</li><li><b>Careers:</b> you now choose yours, and a Promotion ($5, twice) adds $1 to every Hall pass and 2 points per rank.</li><li><b>Red herrings:</b> some events deliver an anonymous tip (marked ? in your notebook). Two thirds are true, one third are lies that point at the real solution. <b>Suggestion log:</b> every suggestion and whether it was disproved is public and kept under your notebook. <b>Accomplice mode</b> (menu toggle): two culprits, and your accusation must name both suspects.</li><li><b>Spinner 🎡:</b> landing on a payday tile spins a wheel (cash, goods, a clue, an arcade ticket, a tax, or insurance). <b>Fork ⑂:</b> tiles 10 and 22 split the road: safe path for $2, or a shortcut 5 tiles ahead with a 1 in 3 ambush.</li><li><b>Lights out 🌑:</b> now and then the lights go out for a round: traps deal +1 damage and the cat can't scout. <b>Haunted portrait 👻:</b> now and then a trap is moved to a new tile.</li><li><b>Daily Case:</b> everyone gets the same secret solution each day. Win to build a streak 🔥. <b>Badges:</b> 8 to unlock.</li><li><b>Menu extras:</b> Tutorial (guided first game with coach tips), CPU level (Easy, Normal, Hard), Continue (solo and shared-screen games autosave every move), Install as App.</li><li><b>Online:</b> host shares a 4-letter code, friend joins with it.</li><li><b>Pawns:</b> pick a suspect with a perk (Penny pays no rent, Gus starts insured, Dot +$3, Rex has 4 lives, Lottie trades 2:1 at the bank, Moe peeks for 1 good). In online games each player picks a pawn (host first).</li><li><b>Life:</b> careers now include Chef (+1 wheat a turn) and Lawyer (+$1 on event tiles). Buy trap insurance ($4), buy shares ($4, up to 3, dividends each Hall pass, they can crash), and marry or have babies via events: family adds +$1 per pass.</li><li><b>Trap types:</b> Trapdoor 🕳️ (1 damage), Cobweb net 🕸️ (lose next turn), Chandelier 💡 (2 damage), Poison tea ☕ (1 damage and lose 2 goods). Insurance absorbs one.</li><li><b>Mittens the cat ($2):</b> sniffs the next 6 tiles and marks a rival trap in orange if she finds one.</li><li><b>Secret passages ◈:</b> landing on one slips you through to its twin tile.</li><li><b>Manor ♛ (⛏️⛏️🌾🌾):</b> upgrade your own wing. It produces 3 goods instead of 2 and is worth 3 points.</li><li><b>Arcade 🕹️ (Life tab, once a turn):</b> a random bonus game: Lockpick (win goods), Ghost Hunt (win cash), Memory (win a clue or cash) or Haunted Piano (win goods).</li><li><b>Search room (Clues tab, 1 good):</b> search the room you are standing in. If it is the murder room you find bloodstains and every other room is cleared in your notebook; otherwise that room is crossed off. Moving around the manor is part of the detective work.</li><li><b>Victory points:</b> wing 1, manor 2, VP card 1, longest road 2, largest army 2. The first to 8 wins outright. Wings cannot sit on neighbouring tiles. Number tokens show which production roll pays each tile (red 6 and 8 come up most). Road Building dev cards lay 2 free roads.</li><li><b>Clue and Catan extras:</b> suggest twice a turn (the second costs $2); suggesting in a room where you own a manor ♛ makes your rival reveal two cards. A wing on or beside your own road yields +1 on a production roll, and a 7 makes the robber lift a good from the blocked wing's owner. The CPU may offer you trades at the start of your turn. In your notebook, a category with one card left shows SOLVED in green.</li><li><b>Score:</b> $ + 5 per wing + 2 per life + 3 per family member + 2 per share. A wrong accusation loses instantly.</li></ol>`)};
+<li><b>Direction:</b> before rolling you can choose to walk backward (no Hall salary going backward). <b>Grand Tour 🗺:</b> visit all 8 rooms to earn $5 and a clue, then start over. The green bar on each player card shows how much of the case they have deduced.</li><li><b>Trade:</b> swap 1 good with your rival (the CPU accepts if it has a spare), or trade 3→1 with the bank.</li><li><b>Careers:</b> each player gets one. Doctor heals every 3 rounds, Butler gains a good on payday, Detective clears a card every 3 rounds, Banker earns $2 extra on payday.</li><li><b>Shop:</b> $3 buys a good, $5 buys a clue.</li><li><b>Weapons:</b> the six weapons lie on the board. Landing on one pays $1. A suggestion drags the named weapon to your tile, and if it is already on your tile when you name it, your rival must reveal that weapon card first (caught red-handed).</li><li><b>Max the cat 🐈:</b> wanders 1 to 3 tiles forward each round and knocks out any trap she passes (yours too).</li><li><b>Careers:</b> you now choose yours, and a Promotion ($5, twice) adds $1 to every Hall pass and 2 points per rank.</li><li><b>Red herrings:</b> some events deliver an anonymous tip (marked ? in your notebook). Two thirds are true, one third are lies that point at the real solution. <b>Suggestion log:</b> every suggestion and whether it was disproved is public and kept under your notebook. <b>Accomplice mode</b> (menu toggle): two culprits, and your accusation must name both suspects.</li><li><b>Spinner 🎡:</b> landing on a payday tile spins a wheel (cash, goods, a clue, an arcade ticket, a tax, or insurance). <b>Fork ⑂:</b> tiles 10 and 22 split the road: safe path for $2, or a shortcut 5 tiles ahead with a 1 in 3 ambush.</li><li><b>Lights out 🌑:</b> now and then the lights go out for a round: traps deal +1 damage and the cat can't scout. <b>Haunted portrait 👻:</b> now and then a trap is moved to a new tile.</li><li><b>Daily Case:</b> everyone gets the same secret solution each day. Win to build a streak 🔥. <b>Badges:</b> 8 to unlock.</li><li><b>Menu extras:</b> Tutorial (guided first game with coach tips), CPU level (Easy, Normal, Hard), Continue (solo and shared-screen games autosave every move), Install as App.</li><li><b>Online:</b> host shares a 4-letter code, friend joins with it.</li><li><b>Pawns:</b> pick a suspect with a perk (Penny pays no rent, Gus starts insured, Dot +$3, Rex has 4 lives, Lottie trades 2:1 at the bank, Moe peeks for 1 good). In online games each player picks a pawn (host first).</li><li><b>Life:</b> careers now include Chef (+1 wheat a turn) and Lawyer (+$1 on event tiles). Buy trap insurance ($4), buy shares ($4, up to 3, dividends each Hall pass, they can crash), and marry or have babies via events: family adds +$1 per pass.</li><li><b>Trap types:</b> Trapdoor 🕳️ (1 damage), Cobweb net 🕸️ (lose next turn), Chandelier 💡 (2 damage), Poison tea ☕ (1 damage and lose 2 goods). Insurance absorbs one.</li><li><b>Mittens the cat ($2):</b> sniffs the next 6 tiles and marks a rival trap in orange if she finds one.</li><li><b>Secret passages ◈:</b> landing on one slips you through to its twin tile.</li><li><b>Manor ♛ (⛏️⛏️🌾🌾):</b> upgrade your own wing. It produces 3 goods instead of 2 and is worth 3 points.</li><li><b>Arcade 🕹️ (Life tab, once a turn):</b> a random bonus game: Lockpick (win goods), Ghost Hunt (win cash), Memory (win a clue or cash) or Haunted Piano (win goods).</li><li><b>Search room (Clues tab, 1 good):</b> search the room you are standing in. If it is the murder room you find bloodstains and every other room is cleared in your notebook; otherwise that room is crossed off. Moving around the manor is part of the detective work.</li><li><b>Victory points:</b> wing 1, manor 2, VP card 1, longest road 2, largest army 2. The first to 8 wins outright. Wings cannot sit on neighbouring tiles. Number tokens show which production roll pays each tile (red 6 and 8 come up most). Road Building dev cards lay 2 free roads.</li><li><b>Clue and Catan extras:</b> suggest twice a turn (the second costs $2); suggesting in a room where you own a manor ♛ makes your rival reveal two cards. A wing on or beside your own road yields +1 on a production roll, and a 7 makes the robber lift a good from the blocked wing's owner. The CPU may offer you trades at the start of your turn. In your notebook, a category with one card left shows SOLVED in green.</li><li><b>Ambitions 🎯:</b> each player secretly draws one (Collector, Landlord, Survivor, Sleuth, Tycoon, Traveller). Fulfil it by the end of any of your turns for +2 victory points (+4 in the final fortune). Your rival only sees a ?. <b>Disarm ($3, Build tab):</b> removes a rival trap in the next 3 tiles.</li><li><b>Score:</b> $ + 5 per wing + 2 per life + 3 per family member + 2 per share. A wrong accusation loses instantly.</li></ol>`)};
 </script>
 </body>
 </html>
